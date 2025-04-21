@@ -1,0 +1,111 @@
+---
+title: "Bellabeat Case Study Analysis"
+author: "Madhuritha Alle"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r load-libraries, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+```
+```{r load-data}
+activity<-read.csv("dailyActivity_merged.csv")
+sleep <- read.csv("sleepDay_merged.csv")
+
+```
+```{r glimpse-data}
+glimpse(activity)
+summary(activity)
+
+glimpse(sleep)
+summary(sleep)
+```
+```{r clean-data}
+# Rename and convert data formats
+
+activity<-activity %>% 
+  rename(Date=ActivityDate) %>%
+  mutate(Date=mdy(Date))
+
+sleep <-sleep %>%
+  rename(Date=SleepDay) %>%
+  mutate(Date=mdy_hms(Date)) %>%
+  mutate(Date=as_date(Date))  # Drop time
+```
+
+
+```{r clean-data-2}
+# Remove NAs and duplicates
+activity<-distinct(activity) %>% drop_na()
+sleep<- distinct(sleep) %>% drop_na()
+
+#Merge activity +sleep datasets on ID and Date
+merged <- left_join(activity,sleep,by=c("Id","Date"))
+
+# Preview cleaned dataset
+glimpse(merged)
+```
+```{r EDA}
+# Summary statistics
+summary(merged$TotalSteps)
+summary(merged$Calories)
+summary(merged$TotalMinutesAsleep)
+
+# Add weekday column
+merged <-merged %>%
+  mutate(weekday=weekdays(Date))
+```
+```{r plot-histogram}
+ggplot(activity, aes(x=TotalSteps))+
+  geom_histogram(binwidth = 1000,fill="skyblue",color="black")+
+  labs(title="Distribution of Daily steps", x="Steps",y="Frequency")
+
+```
+
+```{r plot-steps-vs-calories}
+ggplot(activity,aes(x=TotalSteps, y=Calories))+
+ geom_point(color="tomato",alpha=0.6)+
+  geom_smooth(method="lm",se=FALSE)+
+  labs(title="Steps vs Calories", x="Total Steps", y="Calories Burned")
+
+```
+```{r plot-weekday-steps}
+merged%>%
+  group_by(weekday)%>%
+  summarise(avg_steps=mean(TotalSteps))%>%
+  ggplot(aes(x=reorder(weekday,-avg_steps),y=avg_steps))+
+  geom_col(fill="steelblue")+
+  labs(title="Average Steps by Day of the Week",x="Day",y="Avg Steps")
+
+
+```
+```{r plot-sleep-vs-steps}
+ggplot(merged,aes(x=TotalMinutesAsleep,y=TotalSteps))+
+  geom_point(color="purple",alpha=0.5)+
+  labs(title="Sleep Duration vs Steps",x="Minutes Asleep",y="Steps")
+
+```
+
+```{r save merged csv}
+write_csv(merged,"cleaned_merged_data.csv")
+
+```
+```{r}
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
